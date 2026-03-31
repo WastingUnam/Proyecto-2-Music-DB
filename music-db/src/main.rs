@@ -1,3 +1,5 @@
+mod interfaz;
+
 fn main() {
-    println!("Hello, world!");
+    interfaz::vista::inicia_vista();
 }

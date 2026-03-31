@@ -1,1 +1,1 @@
-pub mod vista
+pub mod vista;
