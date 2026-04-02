@@ -1,4 +1,5 @@
 use id3::{Tag, TagLike};
+use walkdir::WalkDir;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tag = Tag::read_from_path("./wetdream/stop calling.mp3")?;
@@ -14,6 +15,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Some(track) = tag.track(){
         println!("Numero de pista: {}", track);
+    }
+    println!("\n\n\n\n");
+    for entry in WalkDir::new("wetdream") {
+        println!("{}", entry?.path().display());
     }
     Ok(())
 }
