@@ -6,11 +6,11 @@ fn es_mp3(entry: &DirEntry) -> bool {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let directorio = WalkDir::new("wetdream").into_iter().filter_map(|x| x.ok());
+    let directorio = WalkDir::new("awakebutstillinbed").into_iter().filter_map(|x| x.ok());
     for entry in directorio {
         if es_mp3(&entry){
             let path = entry.path();
-            let tag = Tag::read_from_path(path)?;
+            let tag = Tag::read_from_path(path).unwrap();
 
             if let Some(artist) = tag.artist() {
                 println!("Artista: {}", artist);
