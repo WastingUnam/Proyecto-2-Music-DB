@@ -1,37 +1,30 @@
-use id3::{Tag, TagLike};
 use walkdir::{WalkDir, DirEntry};
+use super::audio;
 
-/// Funcion con una lambda para los diferentes tipos de audio
-fn es_audio(entry: &DirEntry) -> bool {
+fn es_mp3(entry: &DirEntry) -> bool {
 	entry.file_name().to_str()
-	.map(|x| x.ends_with(".mp3") || x.ends_with(".flac"))
+	.map(|x| x.ends_with(".mp3"))
 	.unwrap_or(false)
 }
 
-pub fn minero() -> Result<(), Box<dyn std::error::Error>> {
-	let directorio = WalkDir::new(".").into_iter().filter_map(|x| x.ok());
+/// No se me ocurren otros tipos de audio, y estos son los que uso yo.
+fn es_audio(entry: &DirEntry) ->bool {
+	entry.file_name().to_str()
+	.map(|x| x.ends_with(".flac") || x.ends_with(".wav"))
+	.unwrap_or(false)
+}
+
+pub fn mina(ruta: &str) -> Result<(), Box<dyn std::error::Error>> {
+	let directorio = WalkDir::new(ruta).into_iter().filter_map(|x| x.ok());
+
 	for entry in directorio {
-
 		if !entry.file_type().is_file() { continue; }
-		if !es_audio(&entry){ continue; }
 
-		let path = entry.path();
-		if let Ok(tag) = Tag::read_from_path(path){
-
-			if let Some(artist) = tag.artist() {
-				println!("Artista: {}", artist);
-			}
-			if let Some(title) = tag.title() {
-				println!("Titulo: {}", title);
-			}
-			if let Some(album) = tag.album() {
-				println!("Album: {}", album);
-			}
-			if let Some(track) = tag.track(){
-				println!("Numero de pista: {}", track);
-			}
-			println!("{}", path.display());
-			print!("\n");
+		// Pasamos el archivo específico, no la carpeta
+		if es_mp3(&entry) {
+			let _ = audio::mp3(entry.path());
+		} else if es_audio(&entry) {
+			let _ = audio::audio_general(entry.path());
 		}
 	}
 	Ok(())
