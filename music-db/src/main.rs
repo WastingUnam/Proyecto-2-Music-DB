@@ -6,7 +6,7 @@ fn es_mp3(entry: &DirEntry) -> bool {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let directorio = WalkDir::new("wetdream").into_iter().filter_map(|x| x.ok());
+    let directorio = WalkDir::new(".").into_iter().filter_map(|x| x.ok());
     for entry in directorio {
         if es_mp3(&entry){
             let path = entry.path();
