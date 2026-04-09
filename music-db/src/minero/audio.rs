@@ -1,30 +1,76 @@
 use std::path::Path;
 use id3::{Tag, TagLike};
+use std::fs;
+use chrono::{DateTime, Datelike, Local};
 
-pub fn mp3(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug)]
+pub struct Cancion {
+	pub title: String,
+	pub artist: String,
+	pub album: String,
+	pub genre: String,
+	pub track: u32,
+	pub year: i32,
+	pub path: String,
+}
+
+pub fn mp3(path: &Path) -> Cancion {
 	if let Ok(tag) = Tag::read_from_path(path){
-		if let Some(artist) = tag.artist() {
-			println!("Artista: {}", artist);
-		}
+		let year_from_file = fs::metadata(path)
+		.and_then(|x| x.created())
+		.ok()
+		.map(|x| {
+			let fecha: DateTime<Local> = x.into();
+			fecha.year()
+		})
+		.unwrap_or(2026);
+		let mut cancion = Cancion {
+			title: "Desconocido".to_string(),
+			artist: "Desconocido".to_string(),
+			album: "Desconocido".to_string(),
+			genre: "Desconocido".to_string(),
+			track: 1,
+			year: year_from_file,
+			path: ".".to_string(),
+		};
 		if let Some(title) = tag.title() {
-			println!("Titulo: {}", title);
+			cancion.title = title.to_string();
+		}
+		if let Some(artist) = tag.artist() {
+			cancion.artist = artist.to_string();
 		}
 		if let Some(track) = tag.track(){
-			println!("Numero de pista: {}", track);
+			cancion.track = track;
 		}
 		if let Some(album) = tag.album() {
-			println!("Album: {}", album);
+			cancion.album = album.to_string();
+		}
+		if let Some(genre) = tag.genre() {
+			cancion.genre = genre.to_string();
 		}
 		// Algunos mp3 guardan su fecha de forma distinta.
 		if let Some(year) = tag.year() {
-			println!("Year: {}", year);
+			cancion.year = year;
 		}
 		else if let Some(date) = tag.date_recorded() {
-			println!("Year: {}", date.year);
+			cancion.year = date.year;
 		}
-		println!("{}", path.display());
+		cancion.path = path.to_string_lossy().into_owned();
+		println!("{:#?}", cancion);
 		print!("\n");
+		cancion
+	} else {
+		// Cuando no se puede leer el tag.
+		let fecha = chrono::Local::now();
+		Cancion {
+			title: "Desconocido".to_string(),
+			artist: "Desconocido".to_string(),
+			album: "Desconocido".to_string(),
+			genre: "Desconocido".to_string(),
+			track: 1,
+			year: fecha.year(),
+			path: path.to_string_lossy().into_owned(),
+		}
 	}
-	Ok(())
 }
 
