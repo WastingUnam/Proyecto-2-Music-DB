@@ -1,3 +1,4 @@
+mod dao;
 mod minero;
 use std::env;
 
@@ -5,6 +6,6 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
     let ruta = if args.len() == 1 { "." } else { &args[1] };
-    let _ = minero::mina(ruta);
+    let canciones = minero::mina(ruta);
+    let _ = dao::dao::conecta_db(&canciones);
 }
-

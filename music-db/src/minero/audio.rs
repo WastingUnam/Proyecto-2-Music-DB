@@ -12,6 +12,7 @@ pub struct Cancion {
     pub track: u32,
     pub year: i32,
     pub path: String,
+    pub album_path: String,
 }
 
 pub fn mp3(path: &Path) -> Cancion {
@@ -33,6 +34,7 @@ pub fn mp3(path: &Path) -> Cancion {
         // Se queja mi compilador si pongo directo el path.
         // Asi que mejor lo pongo despues, no es como que pueda cambiar.
         path: ".".to_string(),
+        album_path: ".".to_string(),
     };
     if let Ok(tag) = Tag::read_from_path(path) {
         if let Some(title) = tag.title() {
@@ -46,6 +48,7 @@ pub fn mp3(path: &Path) -> Cancion {
         }
         if let Some(album) = tag.album() {
             cancion.album = album.to_string();
+            cancion.album_path = path.parent().unwrap().to_string_lossy().into_owned();
         }
         if let Some(genre) = tag.genre() {
             cancion.genre = genre.to_string();
