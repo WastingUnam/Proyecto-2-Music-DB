@@ -1,5 +1,6 @@
 use super::audio;
 use super::audio::Cancion;
+use std::fs;
 use walkdir::{DirEntry, WalkDir};
 
 fn es_mp3(entry: &DirEntry) -> bool {
@@ -18,9 +19,11 @@ pub fn mina(ruta: &str) -> Vec<Cancion> {
         if !entry.file_type().is_file() {
             continue;
         }
-        // Pasamos el archivo especifico, asi funcionan los que buscan los metadatos.
         if es_mp3(&entry) {
-            canciones.push(audio::mp3(entry.path()))
+            match fs::canonicalize(entry.path()) {
+                Ok(absolute_path) => canciones.push(audio::mp3(absolute_path.as_path())),
+                Err(e) => println!("Error al obtener la ruta: {}", e),
+            }
         }
     }
     canciones
