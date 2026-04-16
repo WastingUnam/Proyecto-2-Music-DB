@@ -48,8 +48,8 @@ pub fn mp3(path: &Path) -> Cancion {
         }
         if let Some(album) = tag.album() {
             cancion.album = album.to_string();
-            cancion.album_path = path.parent().unwrap().to_string_lossy().into_owned();
         }
+        cancion.album_path = path.parent().unwrap().to_string_lossy().into_owned();
         if let Some(genre) = tag.genre() {
             cancion.genre = genre.to_string();
         }
