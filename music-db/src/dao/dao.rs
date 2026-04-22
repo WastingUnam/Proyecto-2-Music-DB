@@ -1,14 +1,20 @@
 use crate::minero::audio::Cancion;
 use rusqlite::{Connection, params};
-use std::path::Path;
+use std::fs;
+use std::path::PathBuf;
 
-const DB_PATH: &str = "SQL/base.db";
-const SCHEMA_PATH: &str = "SQL/schema.sql";
+const SCHEMA: &str = include_str!("../../SQL/schema.sql");
+
+fn db_path() -> PathBuf {
+    let mut path = dirs::data_dir().expect("No se pudo obtener XDG_DATA_HOME");
+    path.push("music-db");
+    fs::create_dir_all(&path).expect("No se pudo crear el directorio de datos");
+    path.push("base.db");
+    path
+}
 
 fn iniciar_schema(conn: &Connection) {
-    let schema = std::fs::read_to_string(SCHEMA_PATH)
-        .expect("No se pudo leer el schema");
-    conn.execute_batch(&schema)
+    conn.execute_batch(SCHEMA)
         .expect("No se pudo ejecutar el schema");
 }
 
@@ -59,8 +65,9 @@ fn rola_existe(conn: &Connection, path: &str) -> bool {
 }
 
 pub fn conecta_db(canciones: &Vec<Cancion>) -> Result<(), Box<dyn std::error::Error>> {
-    let db_existe = Path::new(DB_PATH).exists();
-    let conn = Connection::open(DB_PATH)?;
+    let db = db_path();
+    let db_existe = db.exists();
+    let conn = Connection::open(&db)?;
 
     if !db_existe {
         iniciar_schema(&conn);
