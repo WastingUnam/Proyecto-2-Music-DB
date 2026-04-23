@@ -5,7 +5,18 @@ use std::path::PathBuf;
 
 const SCHEMA: &str = include_str!("../../SQL/schema.sql");
 
-fn db_path() -> PathBuf {
+#[derive(Debug, Clone)]
+pub struct RolaView {
+    pub id_rola: i64,
+    pub title: String,
+    pub album: String,
+    pub performer: String,
+    pub year: i32,
+    pub genre: String,
+    pub path: String,
+}
+
+pub fn db_path() -> PathBuf {
     let mut path = dirs::data_dir().expect("No se pudo obtener XDG_DATA_HOME");
     path.push("music-db");
     fs::create_dir_all(&path).expect("No se pudo crear el directorio de datos");
@@ -13,7 +24,7 @@ fn db_path() -> PathBuf {
     path
 }
 
-fn iniciar_schema(conn: &Connection) {
+pub fn iniciar_schema(conn: &Connection) {
     conn.execute_batch(SCHEMA)
         .expect("No se pudo ejecutar el schema");
 }
@@ -64,32 +75,50 @@ fn rola_existe(conn: &Connection, path: &str) -> bool {
     rola.exists(params![path]).unwrap()
 }
 
-pub fn conecta_db(canciones: &Vec<Cancion>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, rusqlite::Error> {
+    if rola_existe(conn, &cancion.path) {
+        return Ok(false);
+    }
+
+    let id_performer = buscar_o_crear_performer(conn, &cancion.artist);
+    let id_album = buscar_o_crear_album(conn, &cancion.album, cancion.year, &cancion.album_path);
+
+    conn.execute(
+        "INSERT INTO rolas (id_performer, id_album, path, title, track, year, genre)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![id_performer, id_album, cancion.path, cancion.title, cancion.track, cancion.year, cancion.genre],
+    )?;
+
+    Ok(true)
+}
+
+pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
     let db = db_path();
-    let db_existe = db.exists();
+    if !db.exists() {
+        return Ok(Vec::new());
+    }
     let conn = Connection::open(&db)?;
 
-    if !db_existe {
-        iniciar_schema(&conn);
-    }
+    let mut stmt = conn.prepare(
+        "SELECT r.id_rola, r.title, COALESCE(a.name, 'Desconocido'), \
+         COALESCE(p.name, 'Desconocido'), r.year, COALESCE(r.genre, 'Desconocido'), r.path \
+         FROM rolas r \
+         LEFT JOIN albums a ON r.id_album = a.id_album \
+         LEFT JOIN performers p ON r.id_performer = p.id_performer \
+         ORDER BY p.name"
+    )?;
 
-    let mut nuevas = 0;
+    let rolas = stmt.query_map([], |row| {
+        Ok(RolaView {
+            id_rola: row.get(0)?,
+            title: row.get(1)?,
+            album: row.get(2)?,
+            performer: row.get(3)?,
+            year: row.get(4)?,
+            genre: row.get(5)?,
+            path: row.get(6)?,
+        })
+    })?;
 
-    for cancion in canciones {
-        if rola_existe(&conn, &cancion.path) {
-            continue;
-        }
-
-        let id_performer = buscar_o_crear_performer(&conn, &cancion.artist);
-        let id_album = buscar_o_crear_album(&conn, &cancion.album, cancion.year, &cancion.album_path,);
-
-        conn.execute("INSERT INTO rolas (id_performer, id_album, path, title, track, year, genre)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![id_performer, id_album, cancion.path, cancion.title, cancion.track, cancion.year, cancion.genre,],)?;
-
-        nuevas += 1;
-    }
-
-    println!("Se insertaron {} canciones nuevas.", nuevas);
-    Ok(())
+    rolas.collect()
 }

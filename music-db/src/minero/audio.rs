@@ -3,7 +3,7 @@ use id3::{Tag, TagLike};
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cancion {
     pub title: String,
     pub artist: String,
