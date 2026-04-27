@@ -1,8 +1,9 @@
 pub mod app;
 pub mod window;
 pub mod panel_izq;
-pub mod right_panel;
+pub mod panel_der;
 pub mod dialogo_minado;
+pub mod dialogo_performer;
 pub mod minado;
 pub mod rola_object;
 pub mod art_album;

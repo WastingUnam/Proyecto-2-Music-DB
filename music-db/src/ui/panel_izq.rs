@@ -1,6 +1,6 @@
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Image, Label, Orientation, Scale, Picture, Stack,
+    Align, Box as GtkBox, Button, Image, Label, Orientation, Picture, Scale, Stack,
 };
 use gtk4::glib;
 use std::cell::Cell;
@@ -15,31 +15,37 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
     panel.set_margin_start(10);
     panel.set_margin_end(10);
 
-    // Placeholder
+    // Album art
     let art_stack = Stack::new();
-    art_stack.set_margin_bottom(12);
     let placeholder_img = Image::from_icon_name("audio-x-generic-symbolic");
     placeholder_img.set_pixel_size(250);
     let img_art = Picture::new();
     img_art.set_can_shrink(true);
-    img_art.set_size_request(250, 250);
+    img_art.set_size_request(250, 320);
+    img_art.set_vexpand(true);
     art_stack.add_named(&placeholder_img, Some("placeholder"));
     art_stack.add_named(&img_art, Some("picture"));
     art_stack.set_visible_child_name("placeholder");
+    art_stack.set_vexpand(true);
     panel.append(&art_stack);
+
+    // Empujar los controles hasta abajo
+    let spacer = GtkBox::new(Orientation::Vertical, 0);
+    spacer.set_vexpand(true);
+    panel.append(&spacer);
 
     // Titulo cancion
     let etiqueta_cancion = Label::new(Some("Sin reproducción"));
     etiqueta_cancion.add_css_class("title-3");
     etiqueta_cancion.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-    etiqueta_cancion.set_max_width_chars(20);
+    etiqueta_cancion.set_max_width_chars(25);
     panel.append(&etiqueta_cancion);
 
     // Artista - Album
     let etiqueta_artista = Label::new(Some("Selecciona una canción"));
     etiqueta_artista.add_css_class("dim-label");
     etiqueta_artista.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-    etiqueta_artista.set_max_width_chars(20);
+    etiqueta_artista.set_max_width_chars(25);
     panel.append(&etiqueta_artista);
 
     // Barra de progreso
@@ -57,9 +63,9 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
     tiempo_total.add_css_class("dim-label");
     tiempo_total.add_css_class("caption");
     caja_tiempo.append(&tiempo_actual);
-    let spacer = GtkBox::new(Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    caja_tiempo.append(&spacer);
+    let time_spacer = GtkBox::new(Orientation::Horizontal, 0);
+    time_spacer.set_hexpand(true);
+    caja_tiempo.append(&time_spacer);
     caja_tiempo.append(&tiempo_total);
     panel.append(&caja_tiempo);
 
@@ -127,6 +133,7 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
         state_next.player.next();
         update_now_playing(&state_next);
     });
+
     // Flag para evitar que el timer dispare seeks (causa crujidos)
     let updating_progress = Rc::new(Cell::new(false));
 
@@ -134,7 +141,7 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
     let updating_seek = updating_progress.clone();
     progreso.connect_value_changed(move |scale| {
         if updating_seek.get() {
-            return; // Ignorar cambios del timer
+            return;
         }
         if let Some(dur) = state_seek.player.duration() {
             let pos_ns = (scale.value() * dur.nseconds() as f64) as u64;
@@ -142,7 +149,7 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
         }
     });
 
-    // Cada cuanto actualizar la barra
+    // Timer de actualización
     let state_timer = state.clone();
     let art_stack_ref = art_stack.clone();
     let art_picture_ref = img_art.clone();
@@ -168,18 +175,26 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
             tiempo_total.set_text(&format_time(dur.seconds()));
         }
 
-        // Mostrar bien el artista y la cancion
+        // Titulo
         let now_t = state_timer.now_title.borrow();
         if title_ref.text().as_str() != now_t.as_str() {
             title_ref.set_text(&now_t);
         }
         drop(now_t);
 
+        // Artista - Album
         let now_a = state_timer.now_artist.borrow();
-        if artist_ref.text().as_str() != now_a.as_str() {
-            artist_ref.set_text(&now_a);
+        let now_alb = state_timer.now_album.borrow();
+        let display = if now_alb.is_empty() {
+            now_a.to_string()
+        } else {
+            format!("{} - {}", &*now_a, &*now_alb)
+        };
+        if artist_ref.text().as_str() != display.as_str() {
+            artist_ref.set_text(&display);
         }
         drop(now_a);
+        drop(now_alb);
 
         // Cover del album
         let now_art = state_timer.now_art_path.borrow();

@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::playback::player::Player;
 use super::panel_izq;
-use super::right_panel;
+use super::panel_der;
 
 pub struct SongMeta {
     pub title: String,
@@ -44,11 +44,11 @@ pub fn build_window(app: &Application) {
 
     let paned = gtk4::Paned::builder()
         .orientation(Orientation::Horizontal)
-        .position(250) // 1/4 of 1000 default width
+        .position(350)
         .build();
 
     let left = panel_izq::contruye_panel_izq(&state);
-    let right = right_panel::build_right_panel(&state);
+    let right = panel_der::build_right_panel(&state);
 
     paned.set_start_child(Some(&left));
     paned.set_end_child(Some(&right));

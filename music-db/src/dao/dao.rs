@@ -92,6 +92,117 @@ pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, ru
     Ok(true)
 }
 
+pub fn obtener_id_performer_de_rola(id_rola: i64) -> Result<i64, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    conn.query_row(
+        "SELECT id_performer FROM rolas WHERE id_rola = ?1",
+        params![id_rola],
+        |row| row.get(0),
+    )
+}
+
+pub fn obtener_tipo_performer(id_performer: i64) -> Result<i32, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    conn.query_row(
+        "SELECT id_type FROM performers WHERE id_performer = ?1",
+        params![id_performer],
+        |row| row.get(0),
+    )
+}
+
+pub fn obtener_persona(id_performer: i64) -> Result<Option<(String, String, String, String)>, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    let resultado = conn.query_row(
+        "SELECT stage_name, real_name, birth_date, death_date FROM persons WHERE id_person = ?1",
+        params![id_performer],
+        |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(),
+                row.get::<_, String>(1).unwrap_or_default(),
+                row.get::<_, String>(2).unwrap_or_default(),
+                row.get::<_, String>(3).unwrap_or_default(),
+            ))
+        },
+    );
+    match resultado {
+        Ok(datos) => Ok(Some(datos)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn actualizar_performer_persona(
+    id_performer: i64,
+    stage_name: &str,
+    real_name: &str,
+    birth_date: &str,
+    death_date: &str,
+) -> Result<(), rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    conn.execute(
+        "UPDATE performers SET id_type = 0 WHERE id_performer = ?1",
+        params![id_performer],
+    )?;
+    conn.execute(
+        "INSERT OR REPLACE INTO persons (id_person, stage_name, real_name, birth_date, death_date) \
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![id_performer, stage_name, real_name, birth_date, death_date],
+    )?;
+    Ok(())
+}
+
+pub fn obtener_grupo(id_performer: i64) -> Result<Option<(String, String, String)>, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    let resultado = conn.query_row(
+        "SELECT name, start_date, end_date FROM groups WHERE id_group = ?1",
+        params![id_performer],
+        |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(),
+                row.get::<_, String>(1).unwrap_or_default(),
+                row.get::<_, String>(2).unwrap_or_default(),
+            ))
+        },
+    );
+    match resultado {
+        Ok(datos) => Ok(Some(datos)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn actualizar_performer_grupo(
+    id_performer: i64,
+    start_date: &str,
+    end_date: &str,
+) -> Result<(), rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    let nombre = conn.query_row(
+        "SELECT name FROM performers WHERE id_performer = ?1",
+        params![id_performer],
+        |row| row.get::<_, String>(0),
+    )?;
+    conn.execute(
+        "UPDATE performers SET id_type = 1 WHERE id_performer = ?1",
+        params![id_performer],
+    )?;
+    conn.execute(
+        "INSERT OR REPLACE INTO groups (id_group, name, start_date, end_date) \
+         VALUES (?1, ?2, ?3, ?4)",
+        params![id_performer, nombre, start_date, end_date],
+    )?;
+    Ok(())
+}
+
+pub fn obtener_nombre_performer(id_performer: i64) -> Result<String, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    conn.query_row(
+        "SELECT name FROM performers WHERE id_performer = ?1",
+        params![id_performer],
+        |row| row.get(0),
+    )
+}
+
 pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
     let db = db_path();
     if !db.exists() {

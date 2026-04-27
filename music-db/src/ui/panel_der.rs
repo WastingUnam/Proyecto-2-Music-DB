@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use crate::dao::dao;
 use super::dialogo_minado;
+use super::dialogo_performer;
 use super::rola_object::RolaObject;
 use super::window::{AppState, SongMeta};
 
@@ -27,6 +28,10 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
     status_label.set_hexpand(true);
     status_label.set_halign(gtk4::Align::Start);
     header.append(&status_label);
+
+    let btn_edit_performer = Button::with_label("Editar performer");
+    btn_edit_performer.set_sensitive(false);
+    header.append(&btn_edit_performer);
 
     let btn_mine = Button::with_label("Minar carpeta");
     btn_mine.add_css_class("suggested-action");
@@ -149,6 +154,29 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
 
     panel.append(&stack);
 
+    // Activar boton editar cuando hay seleccion
+    let btn_edit_ref = btn_edit_performer.clone();
+    let sel_ref = selection.clone();
+    selection.connect_selected_notify(move |sel| {
+        btn_edit_ref.set_sensitive(sel.selected() != gtk4::INVALID_LIST_POSITION);
+    });
+
+    // Click en editar performer
+    let sel_edit = sel_ref.clone();
+    let store_edit = store.clone();
+    btn_edit_performer.connect_clicked(move |btn| {
+        let pos = sel_edit.selected();
+        if pos == gtk4::INVALID_LIST_POSITION {
+            return;
+        }
+        if let Some(item) = store_edit.item(pos) {
+            let rola = item.downcast_ref::<RolaObject>().unwrap();
+            let id_rola = rola.id_rola();
+            let window = btn.root().and_downcast::<gtk4::Window>().unwrap();
+            dialogo_performer::mostrar_dialogo_performer(&window, id_rola, || {});
+        }
+    });
+
     let store_rc = Rc::new(store.clone());
     let revelador_minado = Rc::new(minado.clone());
     let revelador_exito = Rc::new(si_se_logro.clone());
@@ -157,21 +185,21 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
     let stack_rc = Rc::new(stack.clone());
 
     // Minado
-    let build_mine_callback = {
+    let contruir_minado = {
         let store_rc = store_rc.clone();
-        let mining_revealer_rc = revelador_minado.clone();
-        let success_revealer_rc = revelador_exito.clone();
-        let mining_spinner_rc = ruedita_minado.clone();
-        let status_label_rc = etiqueta_estado.clone();
+        let minado_revelado = revelador_minado.clone();
+        let exito_revelado = revelador_exito.clone();
+        let ruedita_minado = ruedita_minado.clone();
+        let estado_etiquta = etiqueta_estado.clone();
         let stack_rc = stack_rc.clone();
         let state = state.clone();
 
         move || {
             let store_rc = store_rc.clone();
-            let mining_revealer_rc = mining_revealer_rc.clone();
-            let success_revealer_rc = success_revealer_rc.clone();
-            let mining_spinner_rc = mining_spinner_rc.clone();
-            let status_label_rc = status_label_rc.clone();
+            let mining_revealer_rc = minado_revelado.clone();
+            let success_revealer_rc = exito_revelado.clone();
+            let mining_spinner_rc = ruedita_minado.clone();
+            let status_label_rc = estado_etiquta.clone();
             let stack_rc = stack_rc.clone();
             let state = state.clone();
 
@@ -190,23 +218,23 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
         }
     };
 
-    // "Minar carpeta" button click
-    let build_cb1 = build_mine_callback.clone();
+    // "Minar carpeta" boton
+    let build_cb1 = contruir_minado.clone();
     btn_mine.connect_clicked(move |btn| {
         let cb = build_cb1();
         let window = btn.root().and_downcast::<gtk4::Window>().unwrap();
         dialogo_minado::show_mining_dialog(&window, move |ruta| cb(ruta));
     });
 
-    // Empty state button
-    let build_cb2 = build_mine_callback;
+    // Estado vacio boton
+    let build_cb2 = contruir_minado;
     btn_vacio.connect_clicked(move |btn| {
         let cb = build_cb2();
         let window = btn.root().and_downcast::<gtk4::Window>().unwrap();
         dialogo_minado::show_mining_dialog(&window, move |ruta| cb(ruta));
     });
 
-    // Double-click on row to play
+    // Doble click para que hacer play
     let state_click = state.clone();
     let store_click = store.clone();
     column_view.connect_activate(move |_cv, pos| {
@@ -214,7 +242,6 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
             let rola = item.downcast_ref::<RolaObject>().unwrap();
             let rola_path: String = rola.path();
 
-            // Build playlist and metadata from all songs in store
             let mut paths = Vec::new();
             let mut metas = Vec::new();
             for i in 0..store_click.n_items() {
@@ -234,7 +261,7 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
             state_click.player.play_index(pos as usize);
             *state_click.is_playing.borrow_mut() = true;
 
-            // Update now-playing info
+            // Actualizar info a la cancion que este sonando
             *state_click.now_title.borrow_mut() = rola.title();
             *state_click.now_artist.borrow_mut() = rola.performer();
             *state_click.now_album.borrow_mut() = rola.album();
