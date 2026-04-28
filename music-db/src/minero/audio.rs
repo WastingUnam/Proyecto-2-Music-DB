@@ -3,6 +3,7 @@ use id3::{Tag, TagLike};
 use std::fs;
 use std::path::Path;
 
+// Un struct para guardar las canciones y pasarlas.
 #[derive(Debug, Clone)]
 pub struct Cancion {
     pub title: String,
@@ -15,6 +16,7 @@ pub struct Cancion {
     pub album_path: String,
 }
 
+/// Si son mp3, buscarle el tag y guardarlo en el struct la info si es que tiene alguna.
 pub fn mp3(path: &Path) -> Cancion {
     let year_from_file = fs::metadata(path)
         .and_then(|x| x.created())

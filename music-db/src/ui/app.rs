@@ -5,6 +5,7 @@ use super::window;
 
 const APP_ID: &str = "com.musicdb.app";
 
+/// Iniciar GStreamer y la aplicacion GTK.
 pub fn run() {
     gstreamer::init().expect("No se pudo iniciar GStreamer");
 

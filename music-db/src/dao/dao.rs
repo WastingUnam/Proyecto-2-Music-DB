@@ -1,3 +1,4 @@
+// Toda la logica de acceso a la base de datos SQLite.
 use crate::minero::audio::Cancion;
 use rusqlite::{Connection, params};
 use std::fs;
@@ -11,11 +12,13 @@ pub struct RolaView {
     pub title: String,
     pub album: String,
     pub performer: String,
+    pub track: u32,
     pub year: i32,
     pub genre: String,
     pub path: String,
 }
 
+/// Ruta donde se guarda la base de datos.
 pub fn db_path() -> PathBuf {
     let mut path = dirs::data_dir().expect("No se pudo obtener XDG_DATA_HOME");
     path.push("music-db");
@@ -24,11 +27,13 @@ pub fn db_path() -> PathBuf {
     path
 }
 
+/// Crear las tablas si no existen todavia.
 pub fn iniciar_schema(conn: &Connection) {
     conn.execute_batch(SCHEMA)
         .expect("No se pudo ejecutar el schema");
 }
 
+/// Busca un performer por nombre, si no existe lo crea como Unknown (tipo 2).
 fn buscar_o_crear_performer(conn: &Connection, name: &str) -> i64 {
     let mut performer = conn
         .prepare("SELECT id_performer FROM performers WHERE name = ?1")
@@ -50,6 +55,7 @@ fn buscar_o_crear_performer(conn: &Connection, name: &str) -> i64 {
     }
 }
 
+/// Busca un album por nombre, si no existe lo crea.
 fn buscar_o_crear_album(conn: &Connection, name: &str, year: i32, path: &str) -> i64 {
     let mut album = conn
         .prepare("SELECT id_album FROM albums WHERE name = ?1 AND year = ?2")
@@ -68,6 +74,7 @@ fn buscar_o_crear_album(conn: &Connection, name: &str, year: i32, path: &str) ->
     }
 }
 
+/// Checar si ya tenemos esta cancion en la DB para no duplicar.
 fn rola_existe(conn: &Connection, path: &str) -> bool {
     let mut rola = conn
         .prepare("SELECT 1 FROM rolas WHERE path = ?1")
@@ -75,6 +82,7 @@ fn rola_existe(conn: &Connection, path: &str) -> bool {
     rola.exists(params![path]).unwrap()
 }
 
+/// Insertar una cancion en la DB, regresa false si ya existe esa cancion.
 pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, rusqlite::Error> {
     if rola_existe(conn, &cancion.path) {
         return Ok(false);
@@ -92,6 +100,7 @@ pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, ru
     Ok(true)
 }
 
+/// Sacar el id del performer a partir de una rola.
 pub fn obtener_id_performer_de_rola(id_rola: i64) -> Result<i64, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -101,6 +110,7 @@ pub fn obtener_id_performer_de_rola(id_rola: i64) -> Result<i64, rusqlite::Error
     )
 }
 
+/// Sacar el tipo de performer (0=persona, 1=grupo, 2=unknown).
 pub fn obtener_tipo_performer(id_performer: i64) -> Result<i32, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -110,6 +120,7 @@ pub fn obtener_tipo_performer(id_performer: i64) -> Result<i32, rusqlite::Error>
     )
 }
 
+/// Sacar los datos de una persona (stage name, nombre real, fechas).
 pub fn obtener_persona(id_performer: i64) -> Result<Option<(String, String, String, String)>, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     let resultado = conn.query_row(
@@ -131,6 +142,7 @@ pub fn obtener_persona(id_performer: i64) -> Result<Option<(String, String, Stri
     }
 }
 
+/// Guardar los datos de un performer como persona.
 pub fn actualizar_performer_persona(
     id_performer: i64,
     stage_name: &str,
@@ -151,6 +163,7 @@ pub fn actualizar_performer_persona(
     Ok(())
 }
 
+/// Sacar los datos de un grupo (nombre, fecha inicio, fecha fin).
 pub fn obtener_grupo(id_performer: i64) -> Result<Option<(String, String, String)>, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     let resultado = conn.query_row(
@@ -171,6 +184,7 @@ pub fn obtener_grupo(id_performer: i64) -> Result<Option<(String, String, String
     }
 }
 
+/// Guardar los datos de un performer como grupo.
 pub fn actualizar_performer_grupo(
     id_performer: i64,
     start_date: &str,
@@ -194,6 +208,7 @@ pub fn actualizar_performer_grupo(
     Ok(())
 }
 
+/// Sacar el nombre de un performer por su id.
 pub fn obtener_nombre_performer(id_performer: i64) -> Result<String, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -203,6 +218,7 @@ pub fn obtener_nombre_performer(id_performer: i64) -> Result<String, rusqlite::E
     )
 }
 
+/// Traer todas las rolas de la DB con sus joins a album y performer.
 pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
     let db = db_path();
     if !db.exists() {
@@ -212,7 +228,7 @@ pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
 
     let mut stmt = conn.prepare(
         "SELECT r.id_rola, r.title, COALESCE(a.name, 'Desconocido'), \
-         COALESCE(p.name, 'Desconocido'), r.year, COALESCE(r.genre, 'Desconocido'), r.path \
+         COALESCE(p.name, 'Desconocido'), r.track, r.year, COALESCE(r.genre, 'Desconocido'), r.path \
          FROM rolas r \
          LEFT JOIN albums a ON r.id_album = a.id_album \
          LEFT JOIN performers p ON r.id_performer = p.id_performer \
@@ -225,9 +241,10 @@ pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
             title: row.get(1)?,
             album: row.get(2)?,
             performer: row.get(3)?,
-            year: row.get(4)?,
-            genre: row.get(5)?,
-            path: row.get(6)?,
+            track: row.get(4)?,
+            year: row.get(5)?,
+            genre: row.get(6)?,
+            path: row.get(7)?,
         })
     })?;
 

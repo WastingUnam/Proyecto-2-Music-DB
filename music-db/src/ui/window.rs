@@ -7,6 +7,7 @@ use crate::playback::player::Player;
 use super::panel_izq;
 use super::panel_der;
 
+// Metadatos de la cancion que esta sonando.
 pub struct SongMeta {
     pub title: String,
     pub artist: String,
@@ -14,6 +15,7 @@ pub struct SongMeta {
     pub path: String,
 }
 
+// Estado global de la aplicacion, lo comparten todos los paneles.
 pub struct AppState {
     pub player: Player,
     pub is_playing: RefCell<bool>,
@@ -24,6 +26,7 @@ pub struct AppState {
     pub playlist_meta: RefCell<Vec<SongMeta>>,
 }
 
+/// Construir la ventana principal con el panel izquierdo y derecho.
 pub fn build_window(app: &Application) {
     let state = Rc::new(AppState {
         player: Player::new(),

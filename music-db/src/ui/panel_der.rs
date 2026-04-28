@@ -98,6 +98,7 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
 
     // Columnas
     let columnas: Vec<(&str, &str, bool)> = vec![
+        ("Track", "track", false),
         ("Título", "title", true),
         ("Álbum", "album", true),
         ("Performer", "performer", true),
@@ -123,7 +124,9 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
             let rola = item.item().and_downcast::<RolaObject>().unwrap();
             let etiqueta = item.child().and_downcast::<Label>().unwrap();
 
-            if prop_bind == "year" {
+            if prop_bind == "track" {
+                etiqueta.set_text(&rola.track().to_string());
+            } else if prop_bind == "year" {
                 etiqueta.set_text(&rola.year().to_string());
             } else {
                 let valor: String = rola.property(&prop_bind);
@@ -135,7 +138,11 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
         columna.set_expand(expand);
         columna.set_resizable(true);
         if !expand {
-            columna.set_fixed_width(80);
+            if col_title == "Track" {
+                columna.set_fixed_width(50);
+            } else {
+                columna.set_fixed_width(80);
+            }
         }
         column_view.append_column(&columna);
     }

@@ -6,6 +6,7 @@ use std::cell::RefCell;
 
 use crate::dao::dao::RolaView;
 
+// Wrapper de GObject para las rolas, asi GTK puede mostrarlas en listas.
 mod imp {
     use super::*;
 
@@ -20,6 +21,8 @@ mod imp {
         album: RefCell<String>,
         #[property(get, set)]
         performer: RefCell<String>,
+        #[property(get, set)]
+        track: RefCell<u32>,
         #[property(get, set)]
         year: RefCell<i32>,
         #[property(get, set)]
@@ -49,6 +52,7 @@ impl RolaObject {
             .property("title", &rola.title)
             .property("album", &rola.album)
             .property("performer", &rola.performer)
+            .property("track", rola.track)
             .property("year", rola.year)
             .property("genre", &rola.genre)
             .property("path", &rola.path)

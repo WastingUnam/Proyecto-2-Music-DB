@@ -3,6 +3,7 @@ use gstreamer::glib;
 use gstreamer_player::Player as GstPlayer;
 use std::cell::RefCell;
 
+// Reproductor de musica usando GStreamer.
 pub struct Player {
     gst_player: GstPlayer,
     playlist: RefCell<Vec<String>>,
@@ -39,6 +40,7 @@ impl Player {
         }
     }
 
+    /// Evito crujidos y lo copie de lollypop lol
     fn build_audio_sink() -> Option<gstreamer::Element> {
         let bin = gstreamer::Bin::new();
         let convert = gstreamer::ElementFactory::make("audioconvert").build().ok()?;
@@ -55,6 +57,7 @@ impl Player {
         Some(bin.upcast())
     }
 
+    /// Reproducir un archivo por su path.
     pub fn play_file(&self, path: &str) {
         let uri = if path.starts_with("file://") {
             path.to_string()
@@ -65,10 +68,12 @@ impl Player {
         self.gst_player.play();
     }
 
+    /// Guardar la lista de canciones a reproducir.
     pub fn set_playlist(&self, paths: Vec<String>) {
         *self.playlist.borrow_mut() = paths;
     }
 
+    /// Reproducir una cancion por su posicion en la playlist.
     pub fn play_index(&self, index: usize) {
         let playlist = self.playlist.borrow();
         if let Some(path) = playlist.get(index) {
@@ -79,14 +84,17 @@ impl Player {
         }
     }
 
+    /// Pausar la reproduccion.
     pub fn pause(&self) {
         self.gst_player.pause();
     }
 
+    /// Reanudar la reproduccion.
     pub fn resume(&self) {
         self.gst_player.play();
     }
 
+    /// Siguiente cancion, si llega al final regresa al inicio.
     pub fn next(&self) {
         let idx = self.current_index.borrow().unwrap_or(0);
         let len = self.playlist.borrow().len();
@@ -95,6 +103,7 @@ impl Player {
         }
     }
 
+    /// Cancion anterior, si esta en la primera va a la ultima.
     pub fn prev(&self) {
         let idx = self.current_index.borrow().unwrap_or(0);
         let len = self.playlist.borrow().len();
@@ -104,22 +113,27 @@ impl Player {
         }
     }
 
+    /// Ajustar el volumen.
     pub fn set_volume(&self, volume: f64) {
         self.gst_player.set_volume(volume);
     }
 
+    /// Posicion actual de la cancion.
     pub fn position(&self) -> Option<gstreamer::ClockTime> {
         self.gst_player.position()
     }
 
+    /// Duracion total de la cancion.
     pub fn duration(&self) -> Option<gstreamer::ClockTime> {
         self.gst_player.duration()
     }
 
+    /// Saltar a una posicion especifica.
     pub fn seek(&self, position: gstreamer::ClockTime) {
         self.gst_player.seek(position);
     }
 
+    /// Indice de la cancion actual en la playlist.
     pub fn current_index(&self) -> Option<usize> {
         *self.current_index.borrow()
     }

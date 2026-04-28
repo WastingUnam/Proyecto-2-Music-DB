@@ -69,6 +69,7 @@ pub fn empezar_minar(
                         title: cancion.title.clone(),
                         album: cancion.album.clone(),
                         performer: cancion.artist.clone(),
+                        track: cancion.track,
                         year: cancion.year,
                         genre: cancion.genre.clone(),
                         path: cancion.path.clone(),

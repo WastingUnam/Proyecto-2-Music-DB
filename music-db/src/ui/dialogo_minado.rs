@@ -83,7 +83,7 @@ pub fn show_mining_dialog<F: Fn(String) + 'static>(parent: &Window, on_mine: F) 
         dialogo_cancelar.close();
     });
 
-    // Start mining
+    // Empezar a minar
     let dialogo_iniciar = dialogo.clone();
     let entrada_iniciar = entrada.clone();
     btn_iniciar.connect_clicked(move |_| {

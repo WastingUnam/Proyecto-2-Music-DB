@@ -3,6 +3,7 @@ use super::audio::Cancion;
 use std::fs;
 use walkdir::{DirEntry, WalkDir};
 
+/// Solo pasar por los que sean mp3.
 fn es_mp3(entry: &DirEntry) -> bool {
     entry
         .file_name()
@@ -11,11 +12,13 @@ fn es_mp3(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
+/// Minar en una ruta especifica.
 pub fn mina(ruta: &str) -> Vec<Cancion> {
     let directorio = WalkDir::new(ruta).into_iter().filter_map(|x| x.ok());
     let mut canciones: Vec<Cancion> = Vec::new();
 
     for entry in directorio {
+        // Si le pasas a la fn mp3 algo que no es un archivo se rompe lol.
         if !entry.file_type().is_file() {
             continue;
         }
