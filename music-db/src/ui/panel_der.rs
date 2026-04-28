@@ -1,17 +1,17 @@
+use gtk4::gio;
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Button, ColumnView, ColumnViewColumn, Label, ListItem,
-    Orientation, Revealer, RevealerTransitionType,
-    ScrolledWindow, SignalListItemFactory, Spinner, Stack, StackTransitionType,
+    Box as GtkBox, Button, ColumnView, ColumnViewColumn, Label, ListItem, Orientation, Revealer,
+    RevealerTransitionType, ScrolledWindow, SignalListItemFactory, Spinner, Stack,
+    StackTransitionType,
 };
-use gtk4::gio;
 use std::rc::Rc;
 
-use crate::dao::dao;
 use super::dialogo_minado;
 use super::dialogo_performer;
 use super::rola_object::RolaObject;
 use super::window::{AppState, SongMeta};
+use crate::dao::dao;
 
 pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
     let panel = GtkBox::new(Orientation::Vertical, 0);
@@ -102,8 +102,8 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
         ("Título", "title", true),
         ("Álbum", "album", true),
         ("Performer", "performer", true),
-        ("Año", "year", false),
         ("Género", "genre", false),
+        ("Año", "year", false),
     ];
 
     for (col_title, prop, expand) in columnas {
@@ -141,7 +141,7 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
             if col_title == "Track" {
                 columna.set_fixed_width(50);
             } else {
-                columna.set_fixed_width(80);
+                columna.set_fixed_width(120);
             }
         }
         column_view.append_column(&columna);
