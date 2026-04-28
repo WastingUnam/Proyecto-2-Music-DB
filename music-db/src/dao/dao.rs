@@ -232,7 +232,7 @@ pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
          FROM rolas r \
          LEFT JOIN albums a ON r.id_album = a.id_album \
          LEFT JOIN performers p ON r.id_performer = p.id_performer \
-         ORDER BY p.name"
+         ORDER BY a.name, r.track"
     )?;
 
     let rolas = stmt.query_map([], |row| {
