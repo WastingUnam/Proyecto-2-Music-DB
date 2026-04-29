@@ -267,6 +267,7 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
             *state_click.playlist_meta.borrow_mut() = metas;
             state_click.player.play_index(pos as usize);
             *state_click.is_playing.borrow_mut() = true;
+            state_click.btn_play.set_icon_name("media-playback-pause-symbolic");
 
             // Actualizar info a la cancion que este sonando
             *state_click.now_title.borrow_mut() = rola.title();

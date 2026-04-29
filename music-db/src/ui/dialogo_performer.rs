@@ -6,6 +6,7 @@ use gtk4::{
 use gtk4::StringList;
 
 use crate::dao::dao;
+use crate::ui::dialogo_miembros;
 
 pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn() + 'static) {
     let id_performer = match dao::obtener_id_performer_de_rola(id_rola) {
@@ -28,27 +29,28 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
         .build();
 
     let vbox = GtkBox::new(Orientation::Vertical, 12);
-    vbox.set_margin_top(20);
-    vbox.set_margin_bottom(20);
-    vbox.set_margin_start(20);
-    vbox.set_margin_end(20);
+    vbox.set_margin_top(12);
+    vbox.set_margin_bottom(12);
+    vbox.set_margin_start(12);
+    vbox.set_margin_end(12);
 
-    // Tipo dropdown
+    // Dropdown pa elegir tipo
     let lbl_tipo = Label::new(Some("Tipo de performer:"));
     lbl_tipo.set_halign(Align::Start);
     vbox.append(&lbl_tipo);
 
     let opciones = StringList::new(&["Persona", "Grupo"]);
     let dropdown = DropDown::new(Some(opciones), gtk4::Expression::NONE);
+    // unknown va a persona por default
     let indice_inicial = match tipo_actual {
-        0 => 0, // Person
-        1 => 1, // Group
-        _ => 0, // Unknown -> default a Persona
+        0 => 0,
+        1 => 1,
+        _ => 0,
     };
     dropdown.set_selected(indice_inicial);
     vbox.append(&dropdown);
 
-    // Seccion persona con Revealer
+    // Revealer persona
     let revealer = Revealer::new();
     revealer.set_transition_type(RevealerTransitionType::SlideDown);
 
@@ -82,7 +84,7 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
     entry_death.set_placeholder_text(Some("Fecha"));
     seccion_persona.append(&entry_death);
 
-    // Prellenar si ya hay datos de persona
+    // Si ya tiene datos los pongo
     if let Some((stage, real, birth, death)) = persona_actual {
         entry_stage.set_text(&stage);
         entry_real.set_text(&real);
@@ -94,7 +96,7 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
     revealer.set_reveal_child(indice_inicial == 0);
     vbox.append(&revealer);
 
-    // Seccion grupo con Revealer
+    // Revealer grupo
     let revealer_grupo = Revealer::new();
     revealer_grupo.set_transition_type(RevealerTransitionType::SlideDown);
 
@@ -114,25 +116,38 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
     entry_end.set_placeholder_text(Some("Fecha"));
     seccion_grupo.append(&entry_end);
 
-    // Prellenar si ya hay datos de grupo
+    // Igual, si ya tiene datos
     if let Some((_name, start, end)) = grupo_actual {
         entry_start.set_text(&start);
         entry_end.set_text(&end);
     }
 
+    let btn_miembros = Button::with_label("Editar miembros");
+    btn_miembros.set_margin_top(8);
+    seccion_grupo.append(&btn_miembros);
+
+    let dialogo_ref = dialogo.clone();
+    let nombre_clone = nombre.clone();
+    btn_miembros.connect_clicked(move |_| {
+        dialogo_miembros::mostrar_dialogo_miembros(
+            &dialogo_ref,
+            id_performer,
+            &nombre_clone,
+        );
+    });
+
     revealer_grupo.set_child(Some(&seccion_grupo));
     revealer_grupo.set_reveal_child(indice_inicial == 1);
     vbox.append(&revealer_grupo);
 
-    // Mostrar/ocultar al cambiar dropdown
-    let revealer_clone = revealer.clone();
-    let revealer_grupo_clone = revealer_grupo.clone();
+    // Esconder/mostrar cuando cambia el dropdown
+    let rev_persona = revealer.clone();
+    let rev_grupo = revealer_grupo.clone();
     dropdown.connect_selected_notify(move |dd| {
-        revealer_clone.set_reveal_child(dd.selected() == 0);
-        revealer_grupo_clone.set_reveal_child(dd.selected() == 1);
+        rev_persona.set_reveal_child(dd.selected() == 0);
+        rev_grupo.set_reveal_child(dd.selected() == 1);
     });
 
-    // Botones
     let caja_botones = GtkBox::new(Orientation::Horizontal, 8);
     caja_botones.set_halign(Align::End);
     caja_botones.set_margin_top(12);
@@ -147,18 +162,15 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
 
     dialogo.set_child(Some(&vbox));
 
-    // Cancelar
     let dialogo_cancel = dialogo.clone();
     btn_cancelar.connect_clicked(move |_| {
         dialogo_cancel.close();
     });
 
-    // Guardar
     let dialogo_save = dialogo.clone();
     btn_guardar.connect_clicked(move |_| {
         let seleccion = dropdown.selected();
         let resultado = if seleccion == 0 {
-            // Persona
             dao::actualizar_performer_persona(
                 id_performer,
                 &entry_stage.text(),
@@ -167,7 +179,6 @@ pub fn mostrar_dialogo_performer(parent: &Window, id_rola: i64, on_save: impl Fn
                 &entry_death.text(),
             )
         } else {
-            // Grupo
             dao::actualizar_performer_grupo(
                 id_performer,
                 &entry_start.text(),

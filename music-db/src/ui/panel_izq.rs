@@ -75,9 +75,7 @@ pub fn contruye_panel_izq(state: &Rc<AppState>) -> GtkBox {
     controls.set_margin_top(8);
 
     let btn_prev = Button::from_icon_name("media-skip-backward-symbolic");
-    let btn_play = Button::from_icon_name("media-playback-start-symbolic");
-    btn_play.add_css_class("circular");
-    btn_play.add_css_class("suggested-action");
+    let btn_play = state.btn_play.clone();
     let btn_next = Button::from_icon_name("media-skip-forward-symbolic");
 
     controls.append(&btn_prev);

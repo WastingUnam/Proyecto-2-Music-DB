@@ -1,4 +1,4 @@
-// Toda la logica de acceso a la base de datos SQLite.
+// DAO, todo lo de sqlite va aqui
 use crate::minero::audio::Cancion;
 use rusqlite::{Connection, params};
 use std::fs;
@@ -18,7 +18,7 @@ pub struct RolaView {
     pub path: String,
 }
 
-/// Ruta donde se guarda la base de datos.
+/// Ruta de la base de datos, va en XDG_DATA_HOME
 pub fn db_path() -> PathBuf {
     let mut path = dirs::data_dir().expect("No se pudo obtener XDG_DATA_HOME");
     path.push("music-db");
@@ -27,13 +27,13 @@ pub fn db_path() -> PathBuf {
     path
 }
 
-/// Crear las tablas si no existen todavia.
+/// Crea las tablas si no existen
 pub fn iniciar_schema(conn: &Connection) {
     conn.execute_batch(SCHEMA)
         .expect("No se pudo ejecutar el schema");
 }
 
-/// Busca un performer por nombre, si no existe lo crea como Unknown (tipo 2).
+/// Si no existe lo crea como unknown
 fn buscar_o_crear_performer(conn: &Connection, name: &str) -> i64 {
     let mut performer = conn
         .prepare("SELECT id_performer FROM performers WHERE name = ?1")
@@ -55,7 +55,7 @@ fn buscar_o_crear_performer(conn: &Connection, name: &str) -> i64 {
     }
 }
 
-/// Busca un album por nombre, si no existe lo crea.
+/// Igual que el de arriba pero para albums
 fn buscar_o_crear_album(conn: &Connection, name: &str, year: i32, path: &str) -> i64 {
     let mut album = conn
         .prepare("SELECT id_album FROM albums WHERE name = ?1 AND year = ?2")
@@ -74,7 +74,7 @@ fn buscar_o_crear_album(conn: &Connection, name: &str, year: i32, path: &str) ->
     }
 }
 
-/// Checar si ya tenemos esta cancion en la DB para no duplicar.
+/// Para no meter duplicados
 fn rola_existe(conn: &Connection, path: &str) -> bool {
     let mut rola = conn
         .prepare("SELECT 1 FROM rolas WHERE path = ?1")
@@ -82,7 +82,7 @@ fn rola_existe(conn: &Connection, path: &str) -> bool {
     rola.exists(params![path]).unwrap()
 }
 
-/// Insertar una cancion en la DB, regresa false si ya existe esa cancion.
+/// Mete una cancion a la DB, regresa false si ya estaba
 pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, rusqlite::Error> {
     if rola_existe(conn, &cancion.path) {
         return Ok(false);
@@ -100,7 +100,7 @@ pub fn insertar_cancion(conn: &Connection, cancion: &Cancion) -> Result<bool, ru
     Ok(true)
 }
 
-/// Sacar el id del performer a partir de una rola.
+/// Saca el id del performer de una rola
 pub fn obtener_id_performer_de_rola(id_rola: i64) -> Result<i64, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -110,7 +110,7 @@ pub fn obtener_id_performer_de_rola(id_rola: i64) -> Result<i64, rusqlite::Error
     )
 }
 
-/// Sacar el tipo de performer (0=persona, 1=grupo, 2=unknown).
+/// 0=persona, 1=grupo, 2=unknown
 pub fn obtener_tipo_performer(id_performer: i64) -> Result<i32, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -120,7 +120,7 @@ pub fn obtener_tipo_performer(id_performer: i64) -> Result<i32, rusqlite::Error>
     )
 }
 
-/// Sacar los datos de una persona (stage name, nombre real, fechas).
+/// Datos de persona, regresa None si no hay
 pub fn obtener_persona(id_performer: i64) -> Result<Option<(String, String, String, String)>, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     let resultado = conn.query_row(
@@ -142,7 +142,7 @@ pub fn obtener_persona(id_performer: i64) -> Result<Option<(String, String, Stri
     }
 }
 
-/// Guardar los datos de un performer como persona.
+/// Guarda performer como persona, le cambia el tipo y mete los datos
 pub fn actualizar_performer_persona(
     id_performer: i64,
     stage_name: &str,
@@ -163,7 +163,7 @@ pub fn actualizar_performer_persona(
     Ok(())
 }
 
-/// Sacar los datos de un grupo (nombre, fecha inicio, fecha fin).
+/// Datos de grupo, igual que obtener_persona pero para grupos
 pub fn obtener_grupo(id_performer: i64) -> Result<Option<(String, String, String)>, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     let resultado = conn.query_row(
@@ -184,7 +184,7 @@ pub fn obtener_grupo(id_performer: i64) -> Result<Option<(String, String, String
     }
 }
 
-/// Guardar los datos de un performer como grupo.
+/// Lo mismo que actualizar_performer_persona pero pa grupo
 pub fn actualizar_performer_grupo(
     id_performer: i64,
     start_date: &str,
@@ -208,7 +208,7 @@ pub fn actualizar_performer_grupo(
     Ok(())
 }
 
-/// Sacar el nombre de un performer por su id.
+/// Nomas el nombre
 pub fn obtener_nombre_performer(id_performer: i64) -> Result<String, rusqlite::Error> {
     let conn = Connection::open(db_path())?;
     conn.query_row(
@@ -218,7 +218,60 @@ pub fn obtener_nombre_performer(id_performer: i64) -> Result<String, rusqlite::E
     )
 }
 
-/// Traer todas las rolas de la DB con sus joins a album y performer.
+/// Todas las personas que hay, para el dialogo de miembros
+pub fn obtener_todas_personas() -> Result<Vec<(i64, String)>, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    let mut stmt = conn.prepare(
+        "SELECT id_performer, name FROM performers WHERE id_type = 0 ORDER BY name"
+    )?;
+    let personas = stmt.query_map([], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    })?;
+    personas.collect()
+}
+
+/// Quienes estan en el grupo
+pub fn obtener_miembros_grupo(id_group: i64) -> Result<Vec<i64>, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    let mut stmt = conn.prepare(
+        "SELECT id_person FROM in_group WHERE id_group = ?1"
+    )?;
+    let ids = stmt.query_map(params![id_group], |row| row.get(0))?;
+    ids.collect()
+}
+
+/// Borra los que habia y mete los nuevos, con transaccion pa que no se rompa
+pub fn actualizar_miembros_grupo(id_group: i64, ids_personas: &[i64]) -> Result<(), rusqlite::Error> {
+    let mut conn = Connection::open(db_path())?;
+    let tx = conn.transaction()?;
+    tx.execute("DELETE FROM in_group WHERE id_group = ?1", params![id_group])?;
+    for &id_person in ids_personas {
+        tx.execute(
+            "INSERT INTO in_group (id_person, id_group) VALUES (?1, ?2)",
+            params![id_person, id_group],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
+}
+
+/// Crea persona nueva, mete en performers y en persons
+pub fn crear_persona(nombre: &str) -> Result<i64, rusqlite::Error> {
+    let conn = Connection::open(db_path())?;
+    conn.execute(
+        "INSERT INTO performers (id_type, name) VALUES (0, ?1)",
+        params![nombre],
+    )?;
+    let id = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO persons (id_person, stage_name, real_name, birth_date, death_date) \
+         VALUES (?1, ?2, '', '', '')",
+        params![id, nombre],
+    )?;
+    Ok(id)
+}
+
+/// Trae todas las rolas con join a album y performer pa la tabla
 pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
     let db = db_path();
     if !db.exists() {

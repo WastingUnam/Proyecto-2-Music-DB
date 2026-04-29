@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Orientation};
+use gtk4::{Application, ApplicationWindow, Button, Orientation};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -19,6 +19,7 @@ pub struct SongMeta {
 pub struct AppState {
     pub player: Player,
     pub is_playing: RefCell<bool>,
+    pub btn_play: Button,
     pub now_title: RefCell<String>,
     pub now_artist: RefCell<String>,
     pub now_album: RefCell<String>,
@@ -28,9 +29,14 @@ pub struct AppState {
 
 /// Construir la ventana principal con el panel izquierdo y derecho.
 pub fn build_window(app: &Application) {
+    let btn_play = Button::from_icon_name("media-playback-start-symbolic");
+    btn_play.add_css_class("circular");
+    btn_play.add_css_class("suggested-action");
+
     let state = Rc::new(AppState {
         player: Player::new(),
         is_playing: RefCell::new(false),
+        btn_play,
         now_title: RefCell::new(String::from("Sin reproducción")),
         now_artist: RefCell::new(String::from("Selecciona una canción")),
         now_album: RefCell::new(String::new()),
