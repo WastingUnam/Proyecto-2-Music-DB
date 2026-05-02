@@ -1,8 +1,8 @@
 use gtk4::gio;
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Button, ColumnView, ColumnViewColumn, Label, ListItem, Orientation, Revealer,
-    RevealerTransitionType, ScrolledWindow, SignalListItemFactory, Spinner, Stack,
+    Box as GtkBox, Button, ColumnView, ColumnViewColumn, Entry, Label, ListItem, Orientation,
+    Revealer, RevealerTransitionType, ScrolledWindow, SignalListItemFactory, Spinner, Stack,
     StackTransitionType,
 };
 use std::rc::Rc;
@@ -38,6 +38,33 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
     header.append(&btn_mine);
 
     panel.append(&header);
+
+    // Barra de busqueda
+    let caja_busqueda = GtkBox::new(Orientation::Horizontal, 8);
+    caja_busqueda.set_margin_start(12);
+    caja_busqueda.set_margin_end(12);
+    caja_busqueda.set_margin_bottom(8);
+
+    let search_entry = Entry::new();
+    search_entry.set_placeholder_text(Some("Que busca escuchar hoy"));
+    search_entry.set_hexpand(true);
+    caja_busqueda.append(&search_entry);
+
+    let btn_buscar = Button::with_label("Buscar");
+    caja_busqueda.append(&btn_buscar);
+
+    let btn_limpiar = Button::with_label("Limpiar");
+    caja_busqueda.append(&btn_limpiar);
+
+    let error_busqueda = Label::new(None);
+    error_busqueda.add_css_class("error");
+    error_busqueda.set_margin_start(12);
+    error_busqueda.set_margin_bottom(4);
+    error_busqueda.set_halign(gtk4::Align::Start);
+    error_busqueda.set_visible(false);
+
+    panel.append(&caja_busqueda);
+    panel.append(&error_busqueda);
 
     // Minado ruedita
     let minado = Revealer::new();
@@ -277,6 +304,90 @@ pub fn build_right_panel(state: &Rc<AppState>) -> GtkBox {
                 super::art_album::extraer_y_guardar(&rola_path);
         }
     });
+
+    // Buscar
+    {
+        let store = store.clone();
+        let error_label = error_busqueda.clone();
+        let status = etiqueta_estado.clone();
+        let stack = stack_rc.clone();
+        let entry = search_entry.clone();
+
+        let hacer_busqueda = move || {
+            let texto = entry.text().to_string();
+            let texto = texto.trim();
+
+            if texto.is_empty() {
+                // Si esta vacia, mostrar todo
+                error_label.set_visible(false);
+                store.remove_all();
+                if let Ok(rolas) = dao::obtener_rolas() {
+                    for rola in &rolas {
+                        store.append(&RolaObject::new(rola));
+                    }
+                    status.set_text(&format!("{} canciones", store.n_items()));
+                }
+                if store.n_items() > 0 {
+                    stack.set_visible_child_name("table");
+                } else {
+                    stack.set_visible_child_name("empty");
+                }
+                return;
+            }
+
+            match dao::buscar_rolas(texto) {
+                Ok(rolas) => {
+                    error_label.set_visible(false);
+                    store.remove_all();
+                    for rola in &rolas {
+                        store.append(&RolaObject::new(rola));
+                    }
+                    status.set_text(&format!("{} resultados", store.n_items()));
+                    if store.n_items() > 0 {
+                        stack.set_visible_child_name("table");
+                    } else {
+                        stack.set_visible_child_name("empty");
+                    }
+                }
+                Err(e) => {
+                    error_label.set_text(&e);
+                    error_label.set_visible(true);
+                }
+            }
+        };
+
+        let busqueda_btn = hacer_busqueda.clone();
+        btn_buscar.connect_clicked(move |_| busqueda_btn());
+
+        let busqueda_enter = hacer_busqueda.clone();
+        search_entry.connect_activate(move |_| busqueda_enter());
+    }
+
+    // Limpiar
+    {
+        let store = store.clone();
+        let error_label = error_busqueda;
+        let status = etiqueta_estado.clone();
+        let stack = stack_rc.clone();
+        let entry = search_entry;
+
+        btn_limpiar.connect_clicked(move |_| {
+            entry.set_text("");
+            error_label.set_visible(false);
+            store.remove_all();
+            if let Ok(rolas) = dao::obtener_rolas() {
+                for rola in &rolas {
+                    store.append(&RolaObject::new(rola));
+                }
+                status.set_text(&format!("{} canciones", store.n_items()));
+            }
+            if store.n_items() > 0 {
+                stack.set_visible_child_name("table");
+            } else {
+                stack.set_visible_child_name("empty");
+            }
+        });
+    }
 
     panel
 }

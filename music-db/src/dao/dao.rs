@@ -271,6 +271,56 @@ pub fn crear_persona(nombre: &str) -> Result<i64, rusqlite::Error> {
     Ok(id)
 }
 
+/// Busca rolas usando una query con lógica proposicional
+pub fn buscar_rolas(query: &str) -> Result<Vec<RolaView>, String> {
+    let expr = crate::compilador::parsear(query)?;
+    let query_sql = crate::compilador::query_builder::expr_a_sql(&expr);
+
+    let db = db_path();
+    if !db.exists() {
+        return Ok(Vec::new());
+    }
+    let conn = Connection::open(&db).map_err(|e| e.to_string())?;
+
+    let sql = format!(
+        "SELECT r.id_rola, r.title, COALESCE(a.name, 'Desconocido'), \
+         COALESCE(p.name, 'Desconocido'), r.track, r.year, COALESCE(r.genre, 'Desconocido'), r.path \
+         FROM rolas r \
+         LEFT JOIN albums a ON r.id_album = a.id_album \
+         LEFT JOIN performers p ON r.id_performer = p.id_performer \
+         WHERE {} \
+         ORDER BY a.name, r.track",
+        query_sql.where_clause
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> = query_sql
+        .params
+        .iter()
+        .map(|s| s as &dyn rusqlite::types::ToSql)
+        .collect();
+
+    let rolas = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            Ok(RolaView {
+                id_rola: row.get(0)?,
+                title: row.get(1)?,
+                album: row.get(2)?,
+                performer: row.get(3)?,
+                track: row.get(4)?,
+                year: row.get(5)?,
+                genre: row.get(6)?,
+                path: row.get(7)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rolas
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 /// Trae todas las rolas con join a album y performer pa la tabla
 pub fn obtener_rolas() -> Result<Vec<RolaView>, rusqlite::Error> {
     let db = db_path();

@@ -1,0 +1,30 @@
+WHITESPACE = _{ " " | "\t" }
+
+tokens = { SOI ~ token* ~ EOI }
+
+token = {
+    and_op
+  | or_op
+  | not_op
+  | lparen
+  | rparen
+  | colon
+  | campo
+  | valor_comillas
+  | valor_simple
+}
+
+and_op  = { "^" }
+or_op   = { "+" }
+not_op  = { "~" }
+lparen  = { "(" }
+rparen  = { ")" }
+colon   = { ":" }
+
+campo = {
+    "title" | "album" | "performer" | "year" | "genre" | "track"
+}
+
+valor_comillas = ${ "\"" ~ inner_comillas ~ "\"" }
+inner_comillas = { (!"\"" ~ ANY)* }
+valor_simple   = { (!(WHITESPACE | "^" | "+" | "~" | "(" | ")" | "\"" | ":") ~ ANY)+ }
