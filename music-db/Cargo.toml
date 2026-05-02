@@ -10,5 +10,11 @@ gstreamer = "0.25.1"
 gstreamer-player = "0.25.0"
 gtk4 = "0.11.1"
 id3 = "1.16.4"
+lalrpop-util = { version = "0.23.1", features = ["unicode"] }
+pest = "2.8.6"
+pest_derive = "2.8.6"
 rusqlite = "0.39.0"
 walkdir = "2.5.0"
+
+[build-dependencies]
+lalrpop = "0.23.1"

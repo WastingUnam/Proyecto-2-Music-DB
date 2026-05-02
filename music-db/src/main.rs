@@ -1,3 +1,4 @@
+mod compilador;
 mod dao;
 mod minero;
 mod ui;

@@ -1,0 +1,54 @@
+use crate::compilador::ast::{Expr, Campo};
+use crate::compilador::lexer::Token;
+
+grammar;
+
+extern {
+    type Location = usize;
+    type Error = String;
+
+    enum Token {
+        "^" => Token::And,
+        "+" => Token::Or,
+        "~" => Token::Not,
+        "(" => Token::LParen,
+        ")" => Token::RParen,
+        ":" => Token::Colon,
+        Campo => Token::Campo(<String>),
+        Valor => Token::Valor(<String>),
+    }
+}
+
+// OR tiene menor precedencia
+pub Expr: Expr = {
+    <izq:Expr> "+" <der:Term> => Expr::Or(Box::new(izq), Box::new(der)),
+    Term,
+};
+
+// AND tiene mayor precedencia que OR
+Term: Expr = {
+    <izq:Term> "^" <der:Factor> => Expr::And(Box::new(izq), Box::new(der)),
+    Factor,
+};
+
+// NOT y paréntesis tienen la mayor precedencia
+Factor: Expr = {
+    "~" <f:Factor> => Expr::Not(Box::new(f)),
+    "(" <e:Expr> ")" => e,
+    Condicion,
+};
+
+Condicion: Expr = {
+    <c:Campo> ":" <v:Valor> => {
+        let campo = match c.as_str() {
+            "title" => Campo::Title,
+            "album" => Campo::Album,
+            "performer" => Campo::Performer,
+            "year" => Campo::Year,
+            "genre" => Campo::Genre,
+            "track" => Campo::Track,
+            _ => unreachable!(),
+        };
+        Expr::Condicion { campo, valor: v }
+    },
+};
